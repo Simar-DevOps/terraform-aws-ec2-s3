@@ -1,0 +1,26 @@
+﻿# Terraform local state
+*.tfstate
+*.tfstate.*
+.crash
+.terraform/
+.terraform.tfstate.lock.info
+
+# Sensitive variable files
+*.tfvars
+*.auto.tfvars
+!*.tfvars.example
+
+# Local overrides
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+*.pem
+
+
+*.pem
+terraform.tfstate
+terraform.tfstate.*
+.terraform/
+
