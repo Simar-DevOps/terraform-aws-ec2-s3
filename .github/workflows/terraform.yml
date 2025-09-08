@@ -43,4 +43,5 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: "fake"
           AWS_SECRET_ACCESS_KEY: "fake"
-        run: terraform plan -no-color -input=false
+          AWS_DEFAULT_REGION: "us-east-1"
+        run: terraform plan -no-color -input=false -var="aws_profile=ignore"
