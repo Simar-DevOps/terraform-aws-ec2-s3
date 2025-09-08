@@ -39,9 +39,5 @@ jobs:
       - name: Terraform Init (no backend)
         run: terraform init -backend=false
 
-      - name: Terraform Plan (with fake creds)
-        env:
-          AWS_ACCESS_KEY_ID: "fake"
-          AWS_SECRET_ACCESS_KEY: "fake"
-          AWS_DEFAULT_REGION: "us-east-1"
-        run: terraform plan -no-color -input=false -var="aws_profile=ignore"
+      - name: Terraform Plan (offline mode)
+        run: terraform plan -no-color -input=false -refresh=false -lock=false -var="aws_profile=ignore"
