@@ -28,6 +28,6 @@ variable "aws_profile" {
 }
 
 provider "aws" {
-  profile = var.aws_profile
+  profile = var.aws_profile != "ignore" ? var.aws_profile : null
   region  = "us-east-1"
 }
