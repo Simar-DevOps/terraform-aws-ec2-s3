@@ -40,4 +40,8 @@ jobs:
         run: terraform init -backend=false
 
       - name: Terraform Plan (offline mode)
+<<<<<<< HEAD
         run: terraform plan -no-color -input=false -refresh=false -lock=false -var="aws_profile=ignore"
+=======
+        run: terraform plan -no-color -input=false -refresh=false -lock=false -var="aws_profile=ignore"
+>>>>>>> 3aba35efa74bdf729003df2f20c4613873df1057
