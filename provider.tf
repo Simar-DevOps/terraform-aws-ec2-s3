@@ -1,13 +1,8 @@
 terraform {
-  required_version = ">= 1.5"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.6"
     }
     tls = {
       source  = "hashicorp/tls"
@@ -15,12 +10,24 @@ terraform {
     }
     local = {
       source  = "hashicorp/local"
-      version = "~> 2.5"
+      version = "~> 2.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
     }
   }
+
+  required_version = ">= 1.5.0"
+}
+
+# Allow overriding the AWS profile for CI/CD
+variable "aws_profile" {
+  type    = string
+  default = "simar-dev"
 }
 
 provider "aws" {
-  region  = var.region
   profile = var.aws_profile
+  region  = "us-east-1"
 }
