@@ -25,9 +25,15 @@ jobs:
 
       - name: Terraform Validate
         run: terraform validate -no-color
+<<<<<<< HEAD
 plan:   
     runs-on: ubuntu-latest
     needs: terraform   # waits until 'terraform' job passes first
+=======
+  plan:
+    runs-on: ubuntu-latest
+    needs: terraform
+>>>>>>> b79916f46347e17d29ac8ca091dc749c342b2877
 
     steps:
       - name: Checkout code
@@ -41,4 +47,7 @@ plan:
 
       - name: Terraform Plan
         run: terraform plan -no-color
+<<<<<<< HEAD
 
+=======
+>>>>>>> b79916f46347e17d29ac8ca091dc749c342b2877
