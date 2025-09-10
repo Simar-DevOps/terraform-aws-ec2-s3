@@ -1,87 +1,70 @@
-name: Terraform CI
+﻿name: Terraform CI
 
 on:
   pull_request:
-    paths:
-      - '**/*.tf'
-      - '.github/workflows/terraform.yml'
+    paths: ["**/*.tf", ".github/workflows/terraform.yml"]
   push:
     branches: [ main ]
-    paths:
-      - '**/*.tf'
-      - '.github/workflows/terraform.yml'
+    paths: ["**/*.tf", ".github/workflows/terraform.yml"]
 
 permissions:
   contents: read
-  pull-requests: write   # so we can post the plan in the job summary
-  id-token: write        # future-proof if we switch to OIDC (no secrets)
+  pull-requests: write
 
 jobs:
   terraform:
-    name: fmt + validate
     runs-on: ubuntu-latest
+    env:
+      TF_IN_AUTOMATION: "true"
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      TF_WORKING_DIR: "."   # CHANGE this if your .tf files live in a subfolder
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive
-
-      - name: Terraform Init (no backend auth needed for validate)
-        run: terraform init -input=false
-
-      - name: Terraform Validate
-        run: terraform validate -no-color
-
-  plan:
-    name: terraform plan
-    runs-on: ubuntu-latest
-    needs: terraform
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      # Configure AWS creds from Secrets
-      - name: Configure AWS credentials
+      - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      # If you pass region via variable, this keeps TF in sync with the secret.
-      - name: Terraform Init
-        env:
-          TF_VAR_aws_region: ${{ secrets.AWS_DEFAULT_REGION }}
-        run: terraform init -input=false
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
 
-      - name: Terraform Plan (save to file)
-        env:
-          TF_VAR_aws_region: ${{ secrets.AWS_DEFAULT_REGION }}
+      - name: Terraform fmt
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init (S3 backend with S3 lockfile)
+        working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
-          terraform plan -no-color -input=false -out tfplan.binary
-          terraform show -no-color tfplan.binary > tfplan.txt
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=envs/dev/terraform.tfstate" \
+            -backend-config="region=${{ secrets.AWS_REGION }}" \
+            -backend-config="use_lockfile=true" \
+            -backend-config="encrypt=true"
 
-      # Show the plan directly in the PR/job summary (first ~300 lines to keep it readable)
-      - name: Add plan to job summary
-        run: |
-          echo "### Terraform Plan" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          sed -n '1,300p' tfplan.txt >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "_Full plan saved as artifact below._" >> $GITHUB_STEP_SUMMARY
+      - name: Terraform validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
 
-      - name: Upload full plan as artifact
+      - name: Terraform plan
+        id: plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform plan -input=false -no-color -out=plan.bin | tee plan.txt
+
+      - name: Upload plan artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan.txt
-          path: tfplan.txt
+          name: tf-plan
+          path: ${{ env.TF_WORKING_DIR }}/plan.bin
+
+      - name: Comment plan on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: ${{ env.TF_WORKING_DIR }}/plan.txt
