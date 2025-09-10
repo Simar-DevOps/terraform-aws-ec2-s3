@@ -8,3 +8,4 @@ terraform output
 
 Destroy:
 terraform destroy -var-file="dev.tfvars"
+# ci test
