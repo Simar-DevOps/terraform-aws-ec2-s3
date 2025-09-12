@@ -1,0 +1,121 @@
+name: Terraform CI + Apply
+
+on:
+  pull_request:
+    paths:
+      - '**/*.tf'
+      - '.github/workflows/terraform.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - '**/*.tf'
+      - '.github/workflows/terraform.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write   # needed for OIDC (optional step 3)
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  fmt_validate:
+    name: fmt + validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform fmt (check)
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform validate
+        run: terraform validate
+
+  plan:
+    if: ${{ github.event_name == 'pull_request' }}
+    name: terraform plan (PR)
+    runs-on: ubuntu-latest
+    needs: fmt_validate
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # ---- AUTH OPTION A: Access keys via repo secrets (works today) ----
+      # - name: Configure AWS credentials (secrets)
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: us-east-1
+
+      # ---- AUTH OPTION B: OIDC (Step 3) ----
+      # uncomment after you create the role and add its ARN
+      # - name: Configure AWS credentials (OIDC)
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/<ROLE_NAME>
+      #     aws-region: us-east-1
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform plan (no refresh/lock for speed in CI)
+        run: terraform plan -no-color -input=false -refresh=false -lock=false
+        id: plan
+
+      - name: Post plan to job summary
+        run: |
+          {
+            echo "### Terraform plan (PR)"
+            echo
+            echo '```'
+            terraform plan -no-color -input=false -refresh=false -lock=false
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
+
+  apply:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    name: terraform apply (main, gated)
+    runs-on: ubuntu-latest
+    needs: fmt_validate
+    environment:
+      name: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # ---- AUTH OPTION A: Access keys (works now) ----
+      # - name: Configure AWS credentials (secrets)
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: us-east-1
+
+      # ---- AUTH OPTION B: OIDC (Step 3) ----
+      # - name: Configure AWS credentials (OIDC)
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/<ROLE_NAME>
+      #     aws-region: us-east-1
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform apply
+        run: terraform apply -auto-approve -input=false
