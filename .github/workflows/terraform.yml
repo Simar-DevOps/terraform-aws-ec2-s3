@@ -2,9 +2,7 @@ name: Terraform CI + Apply
 
 on:
   pull_request:
-    paths:
-      - '**/*.tf'
-      - '.github/workflows/terraform.yml'
+    types: [opened, synchronize, reopened]
   push:
     branches: [ main ]
     paths:
@@ -109,3 +107,5 @@ jobs:
 
 
 # ci trigger 2025-09-11T21:04:28.2379227-04:00
+
+# ci trigger 2025-09-11T21:08:40.5929358-04:00
