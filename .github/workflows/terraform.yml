@@ -14,7 +14,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  id-token: write   # needed for OIDC (optional step 3)
+  id-token: write   # required for OIDC
 
 concurrency:
   group: terraform-${{ github.ref }}
@@ -52,28 +52,20 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # ---- AUTH OPTION A: Access keys via repo secrets (works today) ----
-      # - name: Configure AWS credentials (secrets)
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #     aws-region: us-east-1
-
-      # ---- AUTH OPTION B: OIDC (Step 3) ----
-      # uncomment after you create the role and add its ARN
-      # - name: Configure AWS credentials (OIDC)
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/<ROLE_NAME>
-      #     aws-region: us-east-1
+      # PRs use access key secrets (simple & reliable)
+      - name: Configure AWS credentials (secrets)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
       - name: Terraform init
         run: terraform init -input=false
 
       - name: Terraform plan (no refresh/lock for speed in CI)
-        run: terraform plan -no-color -input=false -refresh=false -lock=false
         id: plan
+        run: terraform plan -no-color -input=false -refresh=false -lock=false
 
       - name: Post plan to job summary
         run: |
@@ -99,23 +91,19 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # ---- AUTH OPTION A: Access keys (works now) ----
-      # - name: Configure AWS credentials (secrets)
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #     aws-region: us-east-1
+      # main uses OIDC (no long-lived keys)
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::935271781612:role/gha-terraform-apply
+          aws-region: us-east-1
 
-      # ---- AUTH OPTION B: OIDC (Step 3) ----
-      # - name: Configure AWS credentials (OIDC)
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/<ROLE_NAME>
-      #     aws-region: us-east-1
+      - name: Who am I? (should be assumed-role)
+        run: aws sts get-caller-identity
 
       - name: Terraform init
         run: terraform init -input=false
 
       - name: Terraform apply
         run: terraform apply -auto-approve -input=false
+
