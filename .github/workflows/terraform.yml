@@ -76,36 +76,34 @@ jobs:
           } >> $GITHUB_STEP_SUMMARY
 
   apply:
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    name: terraform apply (main, gated)
-    runs-on: ubuntu-latest
-    needs: fmt_validate
-    environment:
-      name: prod
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+  name: terraform apply (main, gated)
+  runs-on: ubuntu-latest
+  needs: fmt_validate
+  environment:
+    name: prod
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      # main uses OIDC (no long-lived keys)
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::935271781612:role/gha-terraform-apply
-          aws-region: us-east-1
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v3
 
-      - name: Who am I? (should be assumed-role)
-        run: aws sts get-caller-identity
+    # >>> OIDC credentials MUST be configured before init/apply <<<
+    - name: Configure AWS credentials (OIDC)
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::935271781612:role/gha-terraform-apply
+        aws-region: us-east-1
 
-      - name: Terraform init
-        run: terraform init -input=false
+    # Sanity check: proves we assumed your role
+    - name: Who am I?
+      run: aws sts get-caller-identity
 
-      - name: Terraform apply
-        run: terraform apply -auto-approve -input=false
+    - name: Terraform init
+      run: terraform init -input=false
 
+    - name: Terraform apply
+      run: terraform apply -auto-approve -input=false
 
-# ci trigger 2025-09-11T21:04:28.2379227-04:00
-
-# ci trigger 2025-09-11T21:08:40.5929358-04:00
