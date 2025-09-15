@@ -1,4 +1,4 @@
-﻿# Random suffix to keep bucket names unique
+# Random suffix to keep bucket names unique
 resource "random_string" "suffix" {
   length  = 6
   upper   = false
@@ -23,28 +23,28 @@ resource "aws_security_group" "web_sg" {
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description      = "SSH"
+    from_port        = 22
+    to_port          = 22
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
     ipv6_cidr_blocks = ["::/0"]
   }
 
   ingress {
-    description = "HTTP"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description      = "HTTP"
+    from_port        = 80
+    to_port          = 80
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
     ipv6_cidr_blocks = ["::/0"]
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
     ipv6_cidr_blocks = ["::/0"]
   }
 
@@ -78,8 +78,8 @@ resource "aws_key_pair" "web_key" {
 }
 
 resource "local_file" "private_key_pem" {
-  filename = "${path.module}/tf-day6-${random_string.suffix.result}.pem"
-  content  = tls_private_key.ssh_key.private_key_pem
+  filename        = "${path.module}/tf-day6-${random_string.suffix.result}.pem"
+  content         = tls_private_key.ssh_key.private_key_pem
   file_permission = "0600"
 }
 
