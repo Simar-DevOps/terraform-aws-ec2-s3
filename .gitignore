@@ -1,26 +1,41 @@
-﻿# Terraform local state
+﻿# Terraform directories
+**/.terraform/
+
+# Terraform state
 *.tfstate
 *.tfstate.*
-.crash
-.terraform/
 .terraform.tfstate.lock.info
 
-# Sensitive variable files
-*.tfvars
-*.auto.tfvars
-!*.tfvars.example
+# Crash logs
+crash.log
+crash.*.log
+.crash
 
-# Local overrides
+# Local overrides (never commit)
 override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
 
-*.pem
+# Variable files (often contain secrets) — keep examples
+*.tfvars
+*.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+!*.tfvars.example
 
+# CLI config (local only)
+.terraformrc
+terraform.rc
 
+# Private keys & credentials
 *.pem
-terraform.tfstate
-terraform.tfstate.*
-.terraform/
+*.key
+
+# Plan outputs
+plan.*
+*.tfplan
+
+# Keep dependency lock file in version control:
+# !.terraform.lock.hcl
 
