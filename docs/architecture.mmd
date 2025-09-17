@@ -3,11 +3,11 @@ flowchart LR
   gh -->|CI triggers| gha[GitHub Actions]
   gha --> fmt[terraform fmt]
   fmt --> validate[terraform validate]
-  validate --> plan[terraform plan (no apply)]
-  plan --> summary[Job Summary shows plan]
-  summary --> reviewers[Review & approve]
-  reviewers -->|merge to main| main[(main branch)]
-
-  %% later:
-  main -->|env: production (protected)| apply[terraform apply (gated)]
+  validate --> plan[terraform plan - no apply]
+  plan --> summary[plan shown in Job Summary]
+  summary --> reviewers[reviewers approve]
+  reviewers -->|merge| main[(main branch)]
+  %% later (dashed future path)
+  main -. later .-> apply[manual apply via protected environment]
   apply --> cloud[(Cloud resources)]
+
