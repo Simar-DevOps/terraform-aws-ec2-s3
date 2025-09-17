@@ -1,10 +1,36 @@
-﻿# Terraform: EC2 + S3 (Day 6)
+﻿\# Terraform: EC2 + S3
 
-Run:
-terraform init
-terraform plan  -var-file="dev.tfvars"
-terraform apply -var-file="dev.tfvars"
-terraform output
 
-Destroy:
-terraform destroy -var-file="dev.tfvars"
+
+\[!\[Terraform CI](https://github.com/Simar-DevOps/terraform-aws-ec2-s3/actions/workflows/terraform.yml/badge.svg)](https://github.com/Simar-DevOps/terraform-aws-ec2-s3/actions/workflows/terraform.yml)
+
+
+
+Minimal Terraform project that provisions an EC2 instance and an S3 bucket.  
+
+CI runs \*\*fmt → validate → plan\*\* on pull requests (no apply). The plan is posted in the PR job summary.
+
+
+
+---
+
+
+
+\## Prerequisites
+
+\- Terraform ≥ 1.6
+
+\- AWS credentials available (via `aws configure` or environment variables)
+
+\- `dev.tfvars` with your values (see `dev.tfvars.example`)
+
+
+
+Create your local var file (Windows PowerShell):
+
+```powershell
+
+Copy-Item dev.tfvars.example dev.tfvars
+
+
+
