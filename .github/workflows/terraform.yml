@@ -20,17 +20,14 @@ jobs:
   terraform:
     name: fmt + validate + plan
     runs-on: ubuntu-latest
-
-    # 👇 key part: make plan work in PRs without real AWS creds
     env:
-  	TF_INPUT: "false"
-  	AWS_EC2_METADATA_DISABLED: "true"
-  	AWS_ACCESS_KEY_ID: "test"
-  	AWS_SECRET_ACCESS_KEY: "test"
-  	AWS_DEFAULT_REGION: "us-east-1"
-  	TF_VAR_ci_mode: "true"
-  	TF_VAR_aws_region: "us-east-1"
-
+      TF_INPUT: "false"
+      AWS_EC2_METADATA_DISABLED: "true"
+      AWS_ACCESS_KEY_ID: "test"
+      AWS_SECRET_ACCESS_KEY: "test"
+      AWS_DEFAULT_REGION: "us-east-1"
+      TF_VAR_ci_mode: "true"
+      TF_VAR_aws_region: "us-east-1"
 
     steps:
       - name: Checkout
@@ -39,7 +36,7 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.9.5
+          terraform_version: '1.9.5'
 
       - name: Terraform fmt (check)
         run: terraform fmt -check -recursive
@@ -52,11 +49,11 @@ jobs:
 
       - name: Terraform plan (PR only)
         if: github.event_name == 'pull_request'
+        shell: bash
         run: |
           set -o pipefail
           terraform plan -no-color -input=false -lock=false -refresh=false -out=plan.bin | tee plan.txt
           terraform show -no-color plan.bin > plan.show.txt
-        shell: bash
 
       - name: Add plan to job summary
         if: github.event_name == 'pull_request'
@@ -80,5 +77,3 @@ jobs:
             plan.bin
             plan.txt
             plan.show.txt
-
-
