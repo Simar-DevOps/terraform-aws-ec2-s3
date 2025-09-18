@@ -1,41 +1,5 @@
-﻿# Terraform directories
-**/.terraform/
-
-# Terraform state
+.terraform/
 *.tfstate
 *.tfstate.*
-.terraform.tfstate.lock.info
-
-# Crash logs
+terraform.tfvars
 crash.log
-crash.*.log
-.crash
-
-# Local overrides (never commit)
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-
-# Variable files (often contain secrets) — keep examples
-*.tfvars
-*.tfvars.json
-*.auto.tfvars
-*.auto.tfvars.json
-!*.tfvars.example
-
-# CLI config (local only)
-.terraformrc
-terraform.rc
-
-# Private keys & credentials
-*.pem
-*.key
-
-# Plan outputs
-plan.*
-*.tfplan
-
-# Keep dependency lock file in version control:
-# !.terraform.lock.hcl
-

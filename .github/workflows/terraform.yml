@@ -1,79 +1,37 @@
-name: Terraform CI
+name: Terraform CI (plan only)
 
 on:
   pull_request:
-    paths:
-      - '**/*.tf'
-      - '.github/workflows/terraform.yml'
+    paths: ['**/*.tf', '.github/workflows/terraform.yml']
   push:
     branches: [ main ]
-    paths:
-      - '**/*.tf'
-      - '.github/workflows/terraform.yml'
+    paths: ['**/*.tf', '.github/workflows/terraform.yml']
 
 permissions:
+  id-token: write
   contents: read
   pull-requests: write
-  id-token: write
 
 jobs:
-  terraform:
-    name: fmt + validate + plan
+  plan:
     runs-on: ubuntu-latest
-    env:
-      TF_INPUT: "false"
-      AWS_EC2_METADATA_DISABLED: "true"
-      AWS_ACCESS_KEY_ID: "test"
-      AWS_SECRET_ACCESS_KEY: "test"
-      AWS_DEFAULT_REGION: "us-east-1"
-      TF_VAR_ci_mode: "true"
-      TF_VAR_aws_region: "us-east-1"
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Terraform
+      - name: Configure AWS via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::935271781612:role/github-oidc-terraform-plan
+          aws-region: us-east-1
+
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: '1.9.5'
 
-      - name: Terraform fmt (check)
-        run: terraform fmt -check -recursive
+      - name: Terraform Init
+        run: terraform init -input=false
 
-      - name: Terraform init (no backend)
-        run: terraform init -no-color -backend=false
+      - name: Terraform Validate
+        run: terraform validate
 
-      - name: Terraform validate
-        run: terraform validate -no-color
-
-      - name: Terraform plan (PR only)
-        if: github.event_name == 'pull_request'
-        shell: bash
-        run: |
-          set -o pipefail
-          terraform plan -no-color -input=false -lock=false -refresh=false -out=plan.bin | tee plan.txt
-          terraform show -no-color plan.bin > plan.show.txt
-
-      - name: Add plan to job summary
-        if: github.event_name == 'pull_request'
-        run: |
-          {
-            echo "### Terraform Plan"
-            echo ""
-            echo '```'
-            sed -n '1,200p' plan.show.txt
-            echo '```'
-            echo ""
-            echo "> Full plan attached as an artifact."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload plan artifact
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan
-          path: |
-            plan.bin
-            plan.txt
-            plan.show.txt
+      - name: Terraform Plan
+        run: terraform plan -no-color
