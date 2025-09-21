@@ -34,3 +34,5 @@ Copy-Item dev.tfvars.example dev.tfvars
 
 
 
+
+> **CI Auth:** GitHub Actions uses **OIDC** (short-lived creds; no long-lived AWS keys). See .github/workflows/terraform.yml.
