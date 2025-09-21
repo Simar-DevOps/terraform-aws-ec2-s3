@@ -7,4 +7,3 @@ terraform {
     encrypt        = true
   }
 }
-# ci-trigger 2025-09-21T16:31:55.4120533-04:00
