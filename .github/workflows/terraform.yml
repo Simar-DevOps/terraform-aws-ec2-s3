@@ -1,30 +1,40 @@
-name: Terraform CI (plan only)
+name: Terraform CI/CD (plan on PR, apply on main w/ approval)
 
 on:
   pull_request:
-    paths: ['**/*.tf', '.github/workflows/terraform.yml']
+    paths:
+      - '**/*.tf'
+      - '.github/workflows/terraform.yml'
   push:
     branches: [ main ]
-    paths: ['**/*.tf', '.github/workflows/terraform.yml']
+    paths:
+      - '**/*.tf'
+      - '.github/workflows/terraform.yml'
 
 permissions:
-  id-token: write
   contents: read
   pull-requests: write
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
 
 jobs:
   plan:
+    name: terraform plan (PRs)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Configure AWS via OIDC
+      - name: Configure AWS creds via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::935271781612:role/github-oidc-terraform-plan
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::935271781612:role/github-oidc-terraform
+          role-session-name: gha-terraform-plan
 
-      - name: Setup Terraform
+      - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Init
@@ -34,5 +44,30 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -no-color
+        run: terraform plan -no-color -input=false
 
+  apply:
+    name: terraform apply (main + approval)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: prod   # <-- must match your protected GitHub Environment name
+    needs: []
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS creds via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::935271781612:role/github-oidc-terraform
+          role-session-name: gha-terraform-apply
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -input=false
