@@ -1,16 +1,15 @@
-@"
 name: Terraform CI/CD (plan on PR, apply on main w/ approval)
 
 on:
   pull_request:
     paths:
-      - '**/*.tf'
-      - '.github/workflows/terraform.yml'
+      - "**/*.tf"
+      - ".github/workflows/terraform.yml"
   push:
     branches: [ main ]
     paths:
-      - '**/*.tf'
-      - '.github/workflows/terraform.yml'
+      - "**/*.tf"
+      - ".github/workflows/terraform.yml"
 
 permissions:
   contents: read
@@ -72,4 +71,3 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve -input=false
-"@ | Set-Content -Encoding UTF8 .github\workflows\terraform.yml
