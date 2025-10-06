@@ -1,7 +1,0 @@
-﻿[
-  { "ParameterKey": "VpcId",       "ParameterValue": "vpc-004d634b7cbc0449a"   },
-  { "ParameterKey": "SubnetId",    "ParameterValue": "subnet-087e74c3b45f53a87"},
-  { "ParameterKey": "YourIpCidr",  "ParameterValue": "108.48.26.229/32"  },
-  { "ParameterKey": "InstanceType","ParameterValue": "t3.micro" },
-  { "ParameterKey": "KeyName",     "ParameterValue": ""         }
-]
