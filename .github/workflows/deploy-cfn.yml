@@ -3,13 +3,37 @@
 on:
   workflow_dispatch:
     inputs:
-      stack_name:   { description: "Stack name", default: "cf-ec2-oidc" }
-      region:       { description: "AWS region", default: "us-east-1" }
-      vpc_id:       { description: "VPC ID", required: true }
-      subnet_id:    { description: "Public Subnet ID", required: true }
-      your_ip_cidr: { description: "Your IP in CIDR (x.x.x.x/32)", required: true }
-      instance_type:{ description: "Instance type", default: "t3.micro" }
-      ami_id:       { description: "AMI ID (ami-...)", required: true }
+      stack_name:
+        description: Stack name
+        default: cf-ec2-oidc
+        required: false
+        type: string
+      region:
+        description: AWS region
+        default: us-east-1
+        required: false
+        type: string
+      vpc_id:
+        description: VPC ID
+        required: true
+        type: string
+      subnet_id:
+        description: Public Subnet ID
+        required: true
+        type: string
+      your_ip_cidr:
+        description: Your IP in CIDR (x.x.x.x/32)
+        required: true
+        type: string
+      instance_type:
+        description: Instance type
+        default: t3.micro
+        required: false
+        type: string
+      ami_id:
+        description: AMI ID (ami-...)
+        required: true
+        type: string
 
 jobs:
   deploy:
@@ -17,8 +41,10 @@ jobs:
     permissions:
       id-token: write
       contents: read
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Configure AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
