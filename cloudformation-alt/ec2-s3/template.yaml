@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: EC2 + SG + S3 (versioned/encrypted) - CloudFormation alt
+
+Parameters:
+  VpcId:        { Type: AWS::EC2::VPC::Id }
+  SubnetId:     { Type: AWS::EC2::Subnet::Id }
+  YourIpCidr:   { Type: String }
+  InstanceType: { Type: String, Default: t3.micro, AllowedValues: [t2.micro, t3.micro, t3.small, t3a.micro, t3a.small] }
+  KeyName:      { Type: String, Default: '' }
+  AmiId:        { Type: String, Description: "EC2 AMI ID (e.g., ami-...)" }
+  ProjectTag:   { Type: String, Default: devops-bootcamp }
+  OwnerTag:     { Type: String, Default: simar }
+
+Resources:
+  WebSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH from your IP; HTTP/HTTPS from anywhere
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 22,  ToPort: 22,  CidrIp: !Ref YourIpCidr }
+        - { IpProtocol: tcp, FromPort: 80,  ToPort: 80,  CidrIp: 0.0.0.0/0 }
+        - { IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0 }
+      SecurityGroupEgress:
+        # ? For protocol -1 (all), DO NOT specify FromPort/ToPort
+        - { IpProtocol: -1, CidrIp: 0.0.0.0/0 }
+      Tags:
+        - { Key: Name,    Value: cf-web-sg }
+        - { Key: Project, Value: !Ref ProjectTag }
+        - { Key: Owner,   Value: !Ref OwnerTag }
+
+  AppBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+      VersioningConfiguration: { Status: Enabled }
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - { Key: Project, Value: !Ref ProjectTag }
+        - { Key: Owner,   Value: !Ref OwnerTag }
+
+  WebInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref SubnetId
+          GroupSet: [ !Ref WebSg ]
+      KeyName: !If [HasKey, !Ref KeyName, !Ref "AWS::NoValue"]
+      Tags:
+        - { Key: Name,    Value: cf-web-1 }
+        - { Key: Project, Value: !Ref ProjectTag }
+        - { Key: Owner,   Value: !Ref OwnerTag }
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          dnf -y install httpd
+          systemctl enable --now httpd
+          echo "Hello from CloudFormation. Bucket: ${AppBucket}" > /var/www/html/index.html
+
+Conditions:
+  HasKey: !Not [ !Equals [ !Ref KeyName, "" ] ]
+
+Outputs:
+  InstanceId: { Value: !Ref WebInstance }
+  PublicIp:   { Value: !GetAtt WebInstance.PublicIp }
+  BucketName: { Value: !Ref AppBucket }
