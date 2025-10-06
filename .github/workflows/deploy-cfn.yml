@@ -41,6 +41,8 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    env:
+      AWS_PAGER: ""   # stop aws cli from paging output
 
     steps:
       - name: Checkout
@@ -52,8 +54,28 @@ jobs:
           role-to-assume: arn:aws:iam::935271781612:role/github-oidc-terraform
           aws-region: ${{ github.event.inputs.region }}
 
-      - name: Deploy stack
+      - name: Pre-clean (delete existing stack if present)
+        shell: bash
         run: |
+          set -euo pipefail
+          if aws cloudformation describe-stacks \
+               --region "${{ github.event.inputs.region }}" \
+               --stack-name "${{ github.event.inputs.stack_name }}" >/dev/null 2>&1; then
+            echo "Stack exists; deleting…"
+            aws cloudformation delete-stack \
+              --region "${{ github.event.inputs.region }}" \
+              --stack-name "${{ github.event.inputs.stack_name }}"
+            aws cloudformation wait stack-delete-complete \
+              --region "${{ github.event.inputs.region }}" \
+              --stack-name "${{ github.event.inputs.stack_name }}"
+          else
+            echo "No existing stack."
+          fi
+
+      - name: Deploy stack
+        shell: bash
+        run: |
+          set -euo pipefail
           aws cloudformation deploy \
             --region "${{ github.event.inputs.region }}" \
             --stack-name "${{ github.event.inputs.stack_name }}" \
@@ -64,11 +86,21 @@ jobs:
               YourIpCidr=${{ github.event.inputs.your_ip_cidr }} \
               InstanceType=${{ github.event.inputs.instance_type }} \
               KeyName="" \
-              AmiId=${{ github.event.inputs.ami_id }}
+              AmiId=${{ github.event.inputs.ami_id }} \
+            --no-fail-on-empty-changeset
 
-      - name: Show outputs
+      - name: Show status
         run: |
           aws cloudformation describe-stacks \
             --region "${{ github.event.inputs.region }}" \
             --stack-name "${{ github.event.inputs.stack_name }}" \
-            --query "Stacks[0].Outputs" --output table
+            --query "Stacks[0].[StackStatus,StackStatusReason]" --output table
+
+      - name: Dump CFN failure events (if any)
+        if: always()
+        run: |
+          aws cloudformation describe-stack-events \
+            --region "${{ github.event.inputs.region }}" \
+            --stack-name "${{ github.event.inputs.stack_name }}" \
+            --query "StackEvents[?contains(ResourceStatus,'FAILED') || contains(ResourceStatus,'ROLLBACK')].[Timestamp,LogicalResourceId,ResourceType,ResourceStatus,ResourceStatusReason]" \
+            --output table || true
