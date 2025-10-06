@@ -1,0 +1,129 @@
+﻿name: Deploy CFN (EC2 + SG) — manual
+
+on:
+  workflow_dispatch:
+    inputs:
+      stack_name:
+        description: Stack name
+        default: cf-ec2-oidc
+        required: false
+        type: string
+      region:
+        description: AWS region
+        default: us-east-1
+        required: false
+        type: string
+      vpc_id:
+        description: VPC ID
+        required: true
+        type: string
+      subnet_id:
+        description: Public Subnet ID
+        required: true
+        type: string
+      your_ip_cidr:
+        description: Your IP in CIDR (x.x.x.x/32)
+        required: true
+        type: string
+      instance_type:
+        description: Instance type
+        default: t3.micro
+        required: false
+        type: string
+      ami_id:
+        description: AMI ID (ami-...)
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_PAGER: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::935271781612:role/github-oidc-terraform
+          aws-region: ${{ github.event.inputs.region }}
+
+      - name: Who am I
+        run: aws sts get-caller-identity --output table
+
+      - name: Preflight EC2 CreateSecurityGroup (DryRun)
+        shell: bash
+        run: |
+          set +e
+          OUT=$(aws ec2 create-security-group --dry-run \
+            --group-name dryrun-test-$$ \
+            --description dryrun \
+            --vpc-id "${{ github.event.inputs.vpc_id }}" 2>&1) || true
+          echo "$OUT"
+          if echo "$OUT" | grep -q 'UnauthorizedOperation'; then
+            echo "EC2 CreateSecurityGroup denied"; exit 1; fi
+
+      - name: Preflight EC2 RunInstances (DryRun)
+        shell: bash
+        run: |
+          set +e
+          OUT=$(aws ec2 run-instances --dry-run \
+            --image-id "${{ github.event.inputs.ami_id }}" \
+            --instance-type "${{ github.event.inputs.instance_type }}" \
+            --network-interfaces "AssociatePublicIpAddress=true,DeviceIndex=0,SubnetId=${{ github.event.inputs.subnet_id }}" 2>&1) || true
+          echo "$OUT"
+          if echo "$OUT" | grep -q 'UnauthorizedOperation'; then
+            echo "EC2 RunInstances denied"; exit 1; fi
+
+      - name: Pre-clean (delete existing stack if present)
+        shell: bash
+        run: |
+          if aws cloudformation describe-stacks \
+               --region "${{ github.event.inputs.region }}" \
+               --stack-name "${{ github.event.inputs.stack_name }}" >/dev/null 2>&1; then
+            aws cloudformation delete-stack \
+              --region "${{ github.event.inputs.region }}" \
+              --stack-name "${{ github.event.inputs.stack_name }}"
+            aws cloudformation wait stack-delete-complete \
+              --region "${{ github.event.inputs.region }}" \
+              --stack-name "${{ github.event.inputs.stack_name }}"
+          fi
+
+      - name: Deploy stack (debug)
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws cloudformation deploy --debug \
+            --region "${{ github.event.inputs.region }}" \
+            --stack-name "${{ github.event.inputs.stack_name }}" \
+            --template-file cloudformation-alt/ec2-s3/template-min.yaml \
+            --parameter-overrides \
+              VpcId=${{ github.event.inputs.vpc_id }} \
+              SubnetId=${{ github.event.inputs.subnet_id }} \
+              YourIpCidr=${{ github.event.inputs.your_ip_cidr }} \
+              InstanceType=${{ github.event.inputs.instance_type }} \
+              KeyName="" \
+              AmiId=${{ github.event.inputs.ami_id }} \
+            --no-fail-on-empty-changeset
+
+      - name: Show status
+        run: |
+          aws cloudformation describe-stacks \
+            --region "${{ github.event.inputs.region }}" \
+            --stack-name "${{ github.event.inputs.stack_name }}" \
+            --query "Stacks[0].[StackStatus,StackStatusReason]" --output table
+
+      - name: Dump CFN failure events (if any)
+        if: always()
+        run: |
+          aws cloudformation describe-stack-events \
+            --region "${{ github.event.inputs.region }}" \
+            --stack-name "${{ github.event.inputs.stack_name }}" \
+            --query "StackEvents[?contains(ResourceStatus,'FAILED') || contains(ResourceStatus,'ROLLBACK')].[Timestamp,LogicalResourceId,ResourceType,ResourceStatus,ResourceStatusReason]" \
+            --output table || true
