@@ -1,0 +1,48 @@
+﻿name: Deploy CFN (EC2 + SG)
+
+on:
+  workflow_dispatch:
+    inputs:
+      stack_name:   { description: "Stack name", default: "cf-ec2-oidc" }
+      region:       { description: "AWS region", default: "us-east-1" }
+      vpc_id:       { description: "VPC ID", required: true }
+      subnet_id:    { description: "Public Subnet ID", required: true }
+      your_ip_cidr: { description: "Your IP in CIDR (x.x.x.x/32)", required: true }
+      instance_type:{ description: "Instance type", default: "t3.micro" }
+      ami_id:       { description: "AMI ID (ami-...)", required: true }
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::935271781612:role/github-oidc-terraform
+          aws-region: ${{ github.event.inputs.region }}
+
+      - name: Deploy stack
+        run: |
+          aws cloudformation deploy \
+            --region "${{ github.event.inputs.region }}" \
+            --stack-name "${{ github.event.inputs.stack_name }}" \
+            --template-file cloudformation-alt/ec2-s3/template-min.yaml \
+            --parameter-overrides \
+              VpcId=${{ github.event.inputs.vpc_id }} \
+              SubnetId=${{ github.event.inputs.subnet_id }} \
+              YourIpCidr=${{ github.event.inputs.your_ip_cidr }} \
+              InstanceType=${{ github.event.inputs.instance_type }} \
+              KeyName="" \
+              AmiId=${{ github.event.inputs.ami_id }}
+
+      - name: Show outputs
+        run: |
+          aws cloudformation describe-stacks \
+            --region "${{ github.event.inputs.region }}" \
+            --stack-name "${{ github.event.inputs.stack_name }}" \
+            --query "Stacks[0].Outputs" --output table
