@@ -1,36 +1,11 @@
-\# Contributing
+# Contributing
 
+- **Branching:** `feature/*`, `fix/*`, `chore/*`
+- **Commits:** Conventional Commits (e.g., `feat: add sg rule for ssh ip`)
+- **PRs:** Keep them small. Use the PR template. Include risk & rollback.
 
-
-\## PR flow
-
-1\) Create a small branch: `feature/<slug>` or `chore/<slug>`
-
-2\) Local checks:
-
-&nbsp;  - `terraform fmt -recursive`
-
-&nbsp;  - `terraform init`
-
-&nbsp;  - `terraform validate`
-
-&nbsp;  - `terraform plan -no-color -lock=false -refresh=false`
-
-3\) Open a PR. CI re-runs fmt/validate/plan and posts the plan in the Job Summary.
-
-4\) Get review and merge. No apply in CI.
-
-
-
-\## Commit style
-
-Clear, descriptive messages. Conventional Commits (`feat:`, `fix:`, `chore:`) are welcome.
-
-
-
-\## Secrets
-
-Do \*\*not\*\* commit secrets. We’ll add gated `apply` later with protected env + OIDC.
-
-
-
+## Local checks
+```bash
+terraform fmt -recursive
+terraform validate
+terraform plan -var-file=terraform.tfvars
