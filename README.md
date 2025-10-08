@@ -20,6 +20,15 @@ Minimal Terraform project that provisions an **EC2 instance** and an **S3 bucket
 
 ---
 
+## Inputs
+| Name             | Type   | Example      | Description                         |
+|------------------|--------|--------------|-------------------------------------|
+| `region`         | string | `us-east-1`  | AWS region                          |
+| `project_prefix` | string | `simar`      | Prefix for names/tags               |
+| `allowed_ssh_ip` | string | `1.2.3.4/32` | IP/CIDR permitted for SSH           |
+
+---
+
 ## Prerequisites
 
 - Terraform ≥ **1.6**
