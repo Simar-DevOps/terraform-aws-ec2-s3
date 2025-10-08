@@ -1,6 +1,7 @@
 ﻿# Terraform: EC2 + S3
 
-[![Terraform CI](https://github.com/Simar-DevOps/terraform-aws-ec2-s3/actions/workflows/terraform.yml/badge.svg)](https://github.com/Simar-DevOps/terraform-aws-ec2-s3/actions/workflows/terraform.yml)
+[![Terraform CI](https://img.shields.io/github/actions/workflow/status/Simar-DevOps/terraform-aws-ec2-s3/terraform.yml?label=Terraform%20CI&logo=github-actions)](https://github.com/Simar-DevOps/terraform-aws-ec2-s3/actions)
+[![License](https://img.shields.io/badge/License-MIT-informational)](LICENSE)
 
 Minimal Terraform project that provisions an **EC2 instance** and an **S3 bucket**.
 
